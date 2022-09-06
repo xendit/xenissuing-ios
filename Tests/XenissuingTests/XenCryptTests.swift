@@ -1,5 +1,5 @@
-import XCTest
 import CryptoSwift
+import XCTest
 @testable import Xenissuing
 
 struct TestEncryption: Codable, Hashable {
