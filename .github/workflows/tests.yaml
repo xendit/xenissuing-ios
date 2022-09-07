@@ -11,7 +11,7 @@ jobs:
       fail-fast: false
     runs-on: macos-latest 
     steps:
-      - uses: swift-actions/setup-swift@v1
+      - uses: fwal/setup-swift@2040b795e5c453c3a05fcb8316496afc8a74f192
         with:
           swift-version: ${{ matrix.swift }}
       - uses: actions/checkout@v3
