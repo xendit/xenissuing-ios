@@ -14,13 +14,13 @@ let package = Package(
         .library(
             name: "Xenissuing",
             targets: ["Xenissuing"]
-        ),
+        )
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
         // .package(url: /* package url */, from: "1.0.0"),
         .package(url: "https://github.com/krzyzanowskim/CryptoSwift", .upToNextMajor(from: "1.5.1")),
-        .package(url: "https://github.com/apple/swift-crypto.git", .upToNextMajor(from: "1.0.1"))
+        .package(url: "https://github.com/apple/swift-crypto.git", .upToNextMajor(from: "2.0.0"))
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
@@ -28,13 +28,13 @@ let package = Package(
         .target(
             name: "Xenissuing",
             dependencies: [
-                "CryptoSwift", 
+                "CryptoSwift",
                 .product(name: "Crypto", package: "swift-crypto")
             ]
         ),
         .testTarget(
             name: "XenissuingTests",
             dependencies: ["Xenissuing"]
-        ),
+        )
     ]
 )

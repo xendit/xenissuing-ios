@@ -1,10 +1,10 @@
 import CryptoSwift
+import Foundation
 import XCTest
 @testable import Xenissuing
 
 struct TestEncryption: Codable, Hashable {
     let sessionKey: String
-    let sessionId: String
     let secret: String
     let iv: String
     let plain: String
@@ -17,10 +17,33 @@ final class XenCryptTests: XCTestCase {
         let xcrypt = XenCrypt(xenditKey: xenKey!)
         let sessionKey = try! xcrypt.generateRandom()
         let sessionId = xcrypt.generateSessionId(sessionKey: sessionKey)
-        let iv = sessionId.sealed[0...15]
+        let iv = sessionId.sealed[0 ... 15]
         let aes = try! AES(key: xenKey!.bytes, blockMode: CBC(iv: iv.bytes), padding: .pkcs7)
         let decryptedBytes = try! aes.decrypt(sessionId.sealed[16...].bytes)
         let decryptedData = Data(decryptedBytes)
         XCTAssertEqual(sessionKey.base64EncodedString(), decryptedData.base64EncodedString())
     }
+
+    func testDecrypt() {
+        let xcrypt = XenCrypt(xenditKey: xenKey!)
+        for t in tests {
+            let decrypted = try! xcrypt.decrypt(secret: t.secret, sessionKey: Data(base64Encoded: t.sessionKey)!, iv: t.iv)
+            XCTAssertEqual(String(decoding: decrypted, as: UTF8.self), t.plain)
+        }
+    }
 }
+
+let tests: [TestEncryption] = [
+    TestEncryption(
+        sessionKey: "kojD5eHCyERG7JxABxx5IBr4Y0fUpe19",
+        secret: "hTlNMg4CJZVdTIfXBehfxcU0XQ==",
+        iv: "mxbZWKcnCkiRePK4lqibAQ==",
+        plain: "372"
+    ),
+    TestEncryption(
+        sessionKey: "ry+SUeQQ9ci6rzqBMaZMPgzbp0M6ruIrZXfIso4a6R8=",
+        secret: "dmYJfv2Ou9fyz9WXe15DAeB9cg==",
+        iv: "fbgKT6+XbpLWPizRNRF5sw==",
+        plain: "372"
+    )
+]
