@@ -1,6 +1,6 @@
 import Foundation
 
-#if swift(<5.4)
+#if swift(<5.3)
 #error("This Swift version is not supported.")
 #endif
 
