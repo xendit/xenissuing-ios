@@ -6,7 +6,7 @@ let package = Package(
     name: "Xenissuing",
     // Set minimum deployment target to macOS 10.12.
     platforms: [
-        .macOS(.v10_12),
+        .macOS(.v10_15),
         .iOS(.v14)
     ],
     products: [
