@@ -25,8 +25,12 @@ protocol Crypto {
 
 /// Encapsulates encrypted message and key used as encryption key.
 public struct EncryptedMessage {
-    let key: Data
-    let sealed: Data
+    internal let key: Data
+    public let sealed: Data
+    public init(key: Data, sealed: Data) {
+        self.key = key
+        self.sealed = sealed
+    }
 }
 
 // MARK: - XenCrypt
@@ -53,12 +57,8 @@ public class XenCrypt: Crypto {
       - Returns: the random session key.
       */
     public func generateRandom() throws -> Data {
-        do {
-            let key = SymmetricKey(size: .bits192)
-            return key.serialize()
-        } catch {
-            throw XenError.generateRandomKeyError
-        }
+        let key = SymmetricKey(size: .bits192)
+        return key.serialize()
     }
 
     /**
@@ -86,7 +86,7 @@ public class XenCrypt: Crypto {
                if  there was any issue during encryption.
      - Returns: The encrypted text
      */
-    public func encrypt(plain: Data, iv: Data, sessionKey: Data) throws -> EncryptedMessage {
+    public func encrypt(plain: Data, iv _: Data, sessionKey: Data) throws -> EncryptedMessage {
         do {
             let iv = AES.randomIV(32)
             let gcm = GCM(iv: iv, mode: .combined)

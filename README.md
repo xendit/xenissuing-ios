@@ -23,12 +23,9 @@ It includes several methods:
 ```swift
 import Xenissuing
 
-do {
-    let xenKey = Data(base64EncodedString: "BASE64_ENCODED_KEY_PROVIDED_BY_XENDIT")
-    let xenIssuing = Xenissuing(xenditKey: xenKey)
-    let encrypted, sessionKey = xenissuing.encrypt("123".data(using: .utf8))
-} catch {
-    throw Xenissuing.genericError()
-}
-
+let xen = Xenissuing(xenditKey: "test".data(using: .utf8)!)
+let nonce = try! xen.generateRandom()
+let privateKey = try! xen.generateRandom()
+let encrypted = try! xen.encrypt(plain: "hTlNMg4CJZVdTIfXBehfxcU0XQ==".data(using: .utf8)!, iv: nonce, sessionKey: privateKey)
+let sealed = encrypted.sealed  // sealed message
 ```

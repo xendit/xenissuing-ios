@@ -16,7 +16,7 @@ public final class Xenissuing: XenCrypt {
 
      - Returns: Main module.
      */
-    override init(xenditKey: Data) {
+    override public init(xenditKey: Data) {
         super.init(xenditKey: xenditKey)
     }
 }
