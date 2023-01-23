@@ -27,6 +27,7 @@ It includes several methods:
 let xen = try! Xenissuing(xenditPublicKeyData: Data(base64Encoded: "BASE64_PUBLIC_KEY")!)
 let sessionKey = try! xcrypt.generateRandom()
 let sessionId = try! xcrypt.generateSessionId(sessionKey: sessionKey)
+let sealed = sessionId.sealed // Data
 ```
 
 ### Encryption
