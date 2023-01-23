@@ -20,10 +20,21 @@ It includes several methods:
 - `encrypt` would be used when setting sensitive data.
 - `decrypt` would be used whenever receiving sensitive data from Xenissuing.
 
+
+### Session ID
+
+```swift
+let xen = try! Xenissuing(xenditPublicKeyData: Data(base64Encoded: "BASE64_PUBLIC_KEY")!)
+let sessionKey = try! xcrypt.generateRandom()
+let sessionId = try! xcrypt.generateSessionId(sessionKey: sessionKey)
+```
+
+### Encryption
+
 ```swift
 import Xenissuing
 
-let xen = Xenissuing(xenditKey: "test".data(using: .utf8)!)
+let xen = try! Xenissuing(xenditPublicKeyData: Data(base64Encoded: "BASE64_PUBLIC_KEY")!)
 let nonce = try! xen.generateRandom()
 let privateKey = try! xen.generateRandom()
 let encrypted = try! xen.encrypt(plain: "hTlNMg4CJZVdTIfXBehfxcU0XQ==".data(using: .utf8)!, iv: nonce, sessionKey: privateKey)
