@@ -1,37 +1,41 @@
 import Foundation
 
 public enum XenError: Error {
-    case encryptionError
-    case decryptionError
-    case genericError
-    case generateRandomKeyError
-    case generateSessionIdError
-    case updateKeychainError
-    case convertKeyDataError
-    case encryptRSAError
-}
+    case encryptionError(String)
+    case decryptionError(String)
+    case genericError(String)
+    case generateRandomKeyError(String)
+    case generateSessionIdError(String)
+    case updateKeychainError(String)
+    case convertKeyDataError(String)
+    case encryptRSAError(String)
+    static let encryptionErrorDefaultMessage: String = "There was an error while trying to encrypt using XenIssuing library."
+    static let decryptionErrorDefaultMessage: String = "There was an error while trying to decrypt using XenIssuing library."
+    static let genericErrorDefaultMessage: String = "There was an error while using XenIssuing library."
+    static let generateRandomKeyErrorDefaultMessage: String = "There was an error while generating a random key."
+    static let generateSessionIdErrorDefaultMessage: String = "There was an error while generating a session id."
+    static let convertKeyDataErrorDefaultMessage: String = "There was an error while trying to read the public key data."
+    static let updateKeychainErrorDefaultMessage: String = "There was an error while trying to update the keychain."
+    static let encryptRSAErrorDefaultMessage: String = "There was an error while trying to encrypt with RSA."
 
-extension XenError: LocalizedError {
-    public var errorDescription: String? {
+    var localizedDescription: String {
         switch self {
-        case .genericError:
-            return NSLocalizedString("There was an error while using XenIssuing library.", comment: "XenError")
-        case .encryptionError:
-            return NSLocalizedString("There was an error while trying to encrypt using XenIssuing library.", comment: "XenError")
-        case .decryptionError:
-            return NSLocalizedString("There was an error while trying to decrypt using XenIssuing library.", comment: "Please make sure you are properly decrypted values.")
-        case .generateRandomKeyError:
-            return NSLocalizedString("There was an error while generating a random key", comment: "XenError")
-        case .generateSessionIdError:
-            return NSLocalizedString("There was an error while generating a session id", comment: "XenError")
-        case .updateKeychainError:
-            return NSLocalizedString("There was an error while tring to update the keychain", comment: "XenError")
-        case .convertKeyDataError:
-            return NSLocalizedString("There was an error while trying to read the public key data", comment: "XenError")
-        case .encryptRSAError:
-            return NSLocalizedString("There was an error while trying to encrypt with RSA", comment: "XenError")
-        case .generateRandomKeyError:
-            return NSLocalizedString("There was an error while generating a random key", comment: "XenError")
+            case .encryptionError(let message):
+                return message.isEmpty ? XenError.encryptionErrorDefaultMessage : message
+            case .decryptionError(let message):
+                return message.isEmpty ? XenError.decryptionErrorDefaultMessage : message
+            case .genericError(let message):
+                return message.isEmpty ? XenError.genericErrorDefaultMessage : message
+            case .generateRandomKeyError(let message):
+                return message.isEmpty ? XenError.generateRandomKeyErrorDefaultMessage : message
+            case .generateSessionIdError(let message):
+                return message.isEmpty ? XenError.generateSessionIdErrorDefaultMessage : message
+            case .updateKeychainError(let message):
+                return message.isEmpty ? XenError.convertKeyDataErrorDefaultMessage : message
+            case .convertKeyDataError(let message):
+                return message.isEmpty ? XenError.updateKeychainErrorDefaultMessage : message
+            case .encryptRSAError(let message):
+                return message.isEmpty ? XenError.encryptRSAErrorDefaultMessage : message
         }
     }
 }

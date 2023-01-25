@@ -42,36 +42,44 @@ public class XenCrypt: Crypto {
     let xenditPublicKey: SecKey
 
     /**
-     Initializes XenCrypt with the provided public key.
-     If no tag exists, it will save the provided key to the tag provided.
-
-     - Parameters:
-        - xenditPublicKeyData: Public Key, expects PEM base64 format without Headers or Footers.
-        - xenditPublicKeyTag: Public Key Tag. If provided, it will try to check first keychain to get the key data.
-     - Returns: Module to help with encryption.
-     */
+    Initializes an object with the provided public key data and tag.
+    
+    - Parameters:
+    - xenditPublicKeyData: The public key data.
+    - xenditPublicKeyTag: The keychain tag for the public key. Defaults to nil.
+    
+    - Throws:
+    - XenError.convertKeyDataError: If the public key data cannot be converted to a key.
+    - XenError.updateKeychainError: If the keychain cannot be updated with the new key data.
+    
+    - Note:
+    - The error message passed is optional, if no message is passed the default message from the XenError enumeration will be used
+    - SeeAlso:
+    - XenCrypt: Class used to create and update the keychain
+    - XenError: Enumeration that defines the possible errors that can be thrown by the function
+    */
     init(xenditPublicKeyData: Data, xenditPublicKeyTag: String? = nil) throws {
         if let publicTag = xenditPublicKeyTag {
             if let keyFromKeychain = XenCrypt.getKeyFromKeychainAsData(tag: publicTag) {
                 if keyFromKeychain != xenditPublicKeyData {
                     if !XenCrypt.updateKeychain(tag: publicTag, key: xenditPublicKeyData) {
-                        throw XenError.updateKeychainError
+                        throw XenError.updateKeychainError("")
                     }
                 }
                 self.xenditPublicKey = XenCrypt.getKeyFromKeychain(tag: publicTag)!
             } else if let key = XenCrypt.createKeyFromData(key: xenditPublicKeyData) {
                 if !XenCrypt.updateKeychain(tag: publicTag, key: xenditPublicKeyData) {
-                    throw XenError.updateKeychainError
+                    throw XenError.updateKeychainError("")
                 }
                 self.xenditPublicKey = key
             } else {
-                throw XenError.convertKeyDataError
+                throw XenError.convertKeyDataError("")
             }
         } else {
             if let key = XenCrypt.createKeyFromData(key: xenditPublicKeyData) {
-                self.xenditPublicKey = XenCrypt.createKeyFromData(key: xenditPublicKeyData)!
+                self.xenditPublicKey = key
             } else {
-                throw XenError.convertKeyDataError
+                throw XenError.convertKeyDataError("")
             }
         }
     }
@@ -103,7 +111,7 @@ public class XenCrypt: Crypto {
                 plaintext: sessionKey)
             return EncryptedMessage(key: sessionKey, sealed: sealed)
         } catch {
-            throw XenError.generateSessionIdError
+            throw XenError.generateSessionIdError("")
         }
     }
 
@@ -124,7 +132,7 @@ public class XenCrypt: Crypto {
             let sealed = try aes.encrypt(plain.bytes)
             return EncryptedMessage(key: sessionKey, sealed: Data(sealed))
         } catch {
-            throw XenError.encryptionError
+            throw XenError.encryptionError("")
         }
     }
 
@@ -154,10 +162,10 @@ public class XenCrypt: Crypto {
             if let decryptedData = try? AES.GCM.open(sealed, using: SymmetricKey(data: sessionKey)) {
                 return decryptedData
             } else {
-                throw XenError.decryptionError
+                throw XenError.decryptionError("")
             }
         } catch {
-            throw XenError.decryptionError
+            throw XenError.decryptionError("")
         }
     }
 
@@ -243,7 +251,7 @@ private extension SecKey {
         let ciphertextO = SecKeyCreateEncryptedData(self, algorithm,
                                                     plaintext as CFData, &error)
         if let error = error?.takeRetainedValue() { throw error }
-        guard let ciphertext = ciphertextO else { throw XenError.encryptRSAError }
+        guard let ciphertext = ciphertextO else { throw XenError.encryptRSAError("") }
         return ciphertext as Data
     }
 }
