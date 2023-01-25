@@ -1,5 +1,5 @@
-import CryptoSwift
 import Foundation
+import Security
 import XCTest
 @testable import Xenissuing
 
@@ -11,13 +11,33 @@ struct TestEncryption: Codable, Hashable {
 }
 
 final class XenCryptTests: XCTestCase {
-    // Valid RSA Public Key
-    let validPublicKey = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArY3DXFJ2M0EHbsD9r+2XgFVtpYEQR5bxnQZVHVxtVzQP8u2cv/1APs2cft+8E682wKGY7SFUEsFsoqxoak7qsfXYL/mOdvQe6XDyNC7N6oo9Zb8dUKtuy8qPb1bVeTbxAwDVUzIdJpiRVI69fAGCW7aF3jTAV7Q+Z5qUTaLUFyKvu3+j8u/A58Nw5fjOENTLHBZRrXhFtQC1eql2O6FiQRJBDACYtzhyFBMyT/B7SKNPkEvLm1w4AQEWxxwL93B8vxstfpatbJJvorJaDEl/glncxJVtZ0lBeB3dkWdro/TrhpPD7CHKlBIUKRfvq1TgmMFs9SP90DxD9l9mE+AUAwIDAQAB"
+    var publicKeyData: Data!
+    var privateKeyData: Data!
+    var publicKeyTag = "com.tests.test_public_key"
+    var privateKeyTag = "com.tests.test_private_key"
+    var publicKey: SecKey!
+    var privateKey: SecKey!
+
+    override func setUp() {
+        super.setUp()
+        // Generate key pair
+        privateKey = try! SecKey.createRandomKey(type: .rsa, bits: 2048, tag: privateKeyTag)
+        publicKey = privateKey.publicKey()
+        publicKeyData = try? publicKey.externalRepresentation()
+    }
+
+    override func tearDown() {
+        SecKey.deleteKey(tag: privateKeyTag)
+        SecKey.deleteKey(tag: publicKeyTag)
+    }
+
+    func testImportKey() {
+        // Check that keys have been imported
+        XCTAssertNotNil(publicKey, "Public key should not be nil")
+        XCTAssertNotNil(privateKey, "Private key should not be nil")
+    }
 
     func testGenerateSessionId() {
-        let privateKey = try! SecKey.createRandomKey(type: .rsa, bits: 2048)
-        let publicKey = try! privateKey.publicKey()
-        let publicKeyData = try! publicKey.externalRepresentation()
         let xcrypt = try! XenCrypt(xenditPublicKeyData: publicKeyData)
         let sessionKey = try! xcrypt.generateRandom()
         let sessionId = try! xcrypt.generateSessionId(sessionKey: sessionKey)
@@ -27,7 +47,7 @@ final class XenCryptTests: XCTestCase {
     }
 
     func testDecrypt() {
-        let xcrypt = try! XenCrypt(xenditPublicKeyData: Data(base64Encoded: validPublicKey)!)
+        let xcrypt = try! XenCrypt(xenditPublicKeyData: publicKeyData)
         for t in tests {
             let decrypted = try! xcrypt.decrypt(secret: t.secret, sessionKey: Data(base64Encoded: t.sessionKey)!, iv: t.iv)
             XCTAssertEqual(String(decoding: decrypted, as: UTF8.self), t.plain)
@@ -65,36 +85,32 @@ extension SecKey {
     }
 
     /// Creates a random key.
-    static func createRandomKey(type: KeyType, bits: Int) throws -> SecKey {
+    static func createRandomKey(type: KeyType, bits: Int, tag: String) throws -> SecKey? {
         var error: Unmanaged<CFError>?
         let keyO = SecKeyCreateRandomKey([
             kSecAttrKeyType: type.secAttrKeyTypeValue,
             kSecAttrKeySizeInBits: NSNumber(integerLiteral: bits),
+            kSecAttrApplicationTag as String: tag.data(using: .utf8)!,
         ] as CFDictionary, &error)
         // See here for apple's sample code for memory-managing returned errors
         // from the Security framework:
         // https://developer.apple.com/documentation/security/certificate_key_and_trust_services/keys/storing_keys_as_data
         if let error = error?.takeRetainedValue() { throw error }
-        guard let key = keyO else { throw TestsErrors.nilKey }
-        return key
+        return keyO
     }
 
     /// Gets the public key from a key pair.
-    func publicKey() throws -> SecKey {
+    func publicKey() -> SecKey? {
         let publicKeyO = SecKeyCopyPublicKey(self)
-        guard let publicKey = publicKeyO else { throw TestsErrors.nilPublicKey }
-        return publicKey
+        return publicKeyO
     }
 
     /// Exports a key.
-    /// RSA keys are returned in PKCS #1 / DER / ASN.1 format.
-    /// EC keys are returned in ANSI X9.63 format.
-    func externalRepresentation() throws -> Data {
+    func externalRepresentation() throws -> Data? {
         var error: Unmanaged<CFError>?
-        let dataO = SecKeyCopyExternalRepresentation(self, &error)
+        let dataO: CFData? = SecKeyCopyExternalRepresentation(self, &error)
         if let error = error?.takeRetainedValue() { throw error }
-        guard let data = dataO else { throw TestsErrors.nilExternalRepresentation }
-        return data as Data
+        return dataO as Data?
     }
 
     func decrypt(algorithm: SecKeyAlgorithm, ciphertext: Data) throws -> Data {
@@ -104,6 +120,19 @@ extension SecKey {
         if let error = error?.takeRetainedValue() { throw error }
         guard let plaintext = plaintextO else { throw TestsErrors.nilPlaintext }
         return plaintext as Data
+    }
+
+    static func deleteKey(tag: String) {
+        let keyToDelete = [
+            kSecClass as String: kSecClassKey,
+            kSecAttrApplicationTag as String: tag.data(using: .utf8)!,
+            kSecReturnRef as String: true,
+        ] as CFDictionary
+
+        let status = SecItemDelete(keyToDelete)
+        if status != errSecSuccess {
+            print("Error deleting key: \(status)")
+        }
     }
 
     enum TestsErrors: Error {
