@@ -3,7 +3,7 @@
 # Xenissuing 
 
 This SDK comprises of the following modules :
-- XenCrypt: this module handles encryption between XenIssuing and your iOS application.
+- SecureSession: this module handles encryption between XenIssuing and your iOS application.
 ## Requirements
 
 To be able to use XenIssuing, you will need to use the public key provided by Xendit.
@@ -11,9 +11,9 @@ To be able to use XenIssuing, you will need to use the public key provided by Xe
 ## Usage
 
 
-### Xencrypt
+### SecureSession
 
-XenCrypt is a module to help you set up encryption between XenIssuing and your application.
+SecureSession is a module to help you set up encryption between XenIssuing and your application.
 
 It includes several methods:
 - `generateSessionId` will encrypt a session key randomly generated used for asymmetric encryption with Xenissuing.

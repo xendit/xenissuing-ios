@@ -34,10 +34,10 @@ public struct EncryptedMessage {
     }
 }
 
-// MARK: - XenCrypt
+// MARK: - SecureSession
 
 @available(macOS 10.15, *)
-public class XenCrypt: Crypto {
+public class SecureSession: Crypto {
     /// The key provided by Xendit.
     let xenditPublicKey: SecKey
 
@@ -55,20 +55,20 @@ public class XenCrypt: Crypto {
     - Note:
     - The error message passed is optional, if no message is passed the default message from the XenError enumeration will be used
     - SeeAlso:
-    - XenCrypt: Class used to create and update the keychain
+    - SecureSession: Class used to create and update the keychain
     - XenError: Enumeration that defines the possible errors that can be thrown by the function
     */
     init(xenditPublicKeyData: Data, xenditPublicKeyTag: String? = nil) throws {
         if let publicTag = xenditPublicKeyTag {
-            if let keyFromKeychain = XenCrypt.getKeyFromKeychainAsData(tag: publicTag) {
+            if let keyFromKeychain = SecureSession.getKeyFromKeychainAsData(tag: publicTag) {
                 if keyFromKeychain != xenditPublicKeyData {
-                    if !XenCrypt.updateKeychain(tag: publicTag, key: xenditPublicKeyData) {
+                    if !SecureSession.updateKeychain(tag: publicTag, key: xenditPublicKeyData) {
                         throw XenError.updateKeychainError("")
                     }
                 }
-                self.xenditPublicKey = XenCrypt.getKeyFromKeychain(tag: publicTag)!
-            } else if let key = XenCrypt.createKeyFromData(key: xenditPublicKeyData) {
-                if !XenCrypt.updateKeychain(tag: publicTag, key: xenditPublicKeyData) {
+                self.xenditPublicKey = SecureSession.getKeyFromKeychain(tag: publicTag)!
+            } else if let key = SecureSession.createKeyFromData(key: xenditPublicKeyData) {
+                if !SecureSession.updateKeychain(tag: publicTag, key: xenditPublicKeyData) {
                     throw XenError.updateKeychainError("")
                 }
                 self.xenditPublicKey = key
@@ -76,7 +76,7 @@ public class XenCrypt: Crypto {
                 throw XenError.convertKeyDataError("")
             }
         } else {
-            if let key = XenCrypt.createKeyFromData(key: xenditPublicKeyData) {
+            if let key = SecureSession.createKeyFromData(key: xenditPublicKeyData) {
                 self.xenditPublicKey = key
             } else {
                 throw XenError.convertKeyDataError("")

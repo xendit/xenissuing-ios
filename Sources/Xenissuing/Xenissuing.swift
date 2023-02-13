@@ -7,7 +7,7 @@ import Foundation
 // MARK: - Xenissuing
 
 @available(macOS 10.15, *)
-public final class Xenissuing: XenCrypt {
+public final class Xenissuing: SecureSession {
     /**
      Initializes XenIssuing module.
 

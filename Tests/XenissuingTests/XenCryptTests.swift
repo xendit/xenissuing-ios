@@ -10,7 +10,7 @@ struct TestEncryption: Codable, Hashable {
     let plain: String
 }
 
-final class XenCryptTests: XCTestCase {
+final class SecureSessionTests: XCTestCase {
     var publicKeyData: Data!
     var privateKeyData: Data!
     var publicKeyTag = "com.tests.test_public_key"
@@ -38,7 +38,7 @@ final class XenCryptTests: XCTestCase {
     }
 
     func testGenerateSessionId() {
-        let xcrypt = try! XenCrypt(xenditPublicKeyData: publicKeyData)
+        let xcrypt = try! SecureSession(xenditPublicKeyData: publicKeyData)
         let sessionKey = try! xcrypt.generateRandom()
         let sessionId = try! xcrypt.generateSessionId(sessionKey: sessionKey)
         let decryptedBytes = try! privateKey.decrypt(algorithm: .rsaEncryptionOAEPSHA256, ciphertext: sessionId.sealed)
@@ -47,7 +47,7 @@ final class XenCryptTests: XCTestCase {
     }
 
     func testDecrypt() {
-        let xcrypt = try! XenCrypt(xenditPublicKeyData: publicKeyData)
+        let xcrypt = try! SecureSession(xenditPublicKeyData: publicKeyData)
         for t in tests {
             let decrypted = try! xcrypt.decrypt(secret: t.secret, sessionKey: Data(base64Encoded: t.sessionKey)!, iv: t.iv)
             XCTAssertEqual(String(decoding: decrypted, as: UTF8.self), t.plain)
