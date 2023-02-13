@@ -1,0 +1,257 @@
+import Crypto
+import CryptoKit
+import CryptoSwift
+import Foundation
+import Security
+
+/// https://stackoverflow.com/a/57912525
+@available(macOS 10.15, *)
+extension SymmetricKey {
+    // MARK: - Instance Methods
+
+    /// Serializes a `SymmetricKey` to a Base64-encoded `String`.
+    func serialize() -> Data {
+        return withUnsafeBytes { body in
+            Data(body)
+        }
+    }
+}
+
+protocol Crypto {
+    func generateRandom() throws -> Data
+    func generateSessionId(sessionKey: Data) throws -> EncryptedMessage
+    func encrypt(plain: Data, iv: Data, sessionKey: Data) throws -> EncryptedMessage
+    func decrypt(secret: String, sessionKey: Data, iv: String) throws -> Data
+}
+
+/// Encapsulates encrypted message and key used as encryption key.
+public struct EncryptedMessage {
+    internal let key: Data
+    public let sealed: Data
+    public init(key: Data, sealed: Data) {
+        self.key = key
+        self.sealed = sealed
+    }
+}
+
+// MARK: - SecureSession
+
+@available(macOS 10.15, *)
+public class SecureSession: Crypto {
+    /// The key provided by Xendit.
+    let xenditPublicKey: SecKey
+
+    /**
+    Initializes an object with the provided public key data and tag.
+    
+    - Parameters:
+    - xenditPublicKeyData: The public key data.
+    - xenditPublicKeyTag: The keychain tag for the public key. Defaults to nil.
+    
+    - Throws:
+    - XenError.convertKeyDataError: If the public key data cannot be converted to a key.
+    - XenError.updateKeychainError: If the keychain cannot be updated with the new key data.
+    
+    - Note:
+    - The error message passed is optional, if no message is passed the default message from the XenError enumeration will be used
+    - SeeAlso:
+    - SecureSession: Class used to create and update the keychain
+    - XenError: Enumeration that defines the possible errors that can be thrown by the function
+    */
+    init(xenditPublicKeyData: Data, xenditPublicKeyTag: String? = nil) throws {
+        if let publicTag = xenditPublicKeyTag {
+            if let keyFromKeychain = SecureSession.getKeyFromKeychainAsData(tag: publicTag) {
+                if keyFromKeychain != xenditPublicKeyData {
+                    if !SecureSession.updateKeychain(tag: publicTag, key: xenditPublicKeyData) {
+                        throw XenError.updateKeychainError("")
+                    }
+                }
+                self.xenditPublicKey = SecureSession.getKeyFromKeychain(tag: publicTag)!
+            } else if let key = SecureSession.createKeyFromData(key: xenditPublicKeyData) {
+                if !SecureSession.updateKeychain(tag: publicTag, key: xenditPublicKeyData) {
+                    throw XenError.updateKeychainError("")
+                }
+                self.xenditPublicKey = key
+            } else {
+                throw XenError.convertKeyDataError("")
+            }
+        } else {
+            if let key = SecureSession.createKeyFromData(key: xenditPublicKeyData) {
+                self.xenditPublicKey = key
+            } else {
+                throw XenError.convertKeyDataError("")
+            }
+        }
+    }
+
+    /**
+     Generates a random 24 bytes keys.
+      - Throws: `XenError.generateRandomKeyError`
+                if  there was any issue when trying to generate the symmetric key.
+      - Returns: the random session key.
+      */
+    public func generateRandom() throws -> Data {
+        let key = SymmetricKey(size: .bits192)
+        return key.serialize()
+    }
+
+    /**
+     Generates Session Id following AES-CBC  scheme using the key provided by Xendit.
+     IV used is 16 bytes size.
+      - Parameter xenditKey: Secret key `Data` (provided by Xendit).
+      - Parameter sessionKey: Random key `Data`.
+      - Throws: `XenError.encryptionError`
+                if  there was any issue during encryption.
+      - Returns: The encrypted text
+      */
+    public func generateSessionId(sessionKey: Data) throws -> EncryptedMessage {
+        do {
+            let sealed = try self.xenditPublicKey.encrypt(
+                algorithm: .rsaEncryptionOAEPSHA256,
+                plaintext: sessionKey)
+            return EncryptedMessage(key: sessionKey, sealed: sealed)
+        } catch {
+            throw XenError.generateSessionIdError("")
+        }
+    }
+
+    /**
+     Encrypts data following AES-GCM scheme.
+     - Parameter plain: the data to encrupt.
+     - Parameter iv: initilization vector randomly generated
+     - Parameter sessionKey: sessionKey used to encrypt
+     - Throws: `XenError.encryptionError`
+               if  there was any issue during encryption.
+     - Returns: The encrypted text
+     */
+    public func encrypt(plain: Data, iv _: Data, sessionKey: Data) throws -> EncryptedMessage {
+        do {
+            let iv = AES.randomIV(32)
+            let gcm = GCM(iv: iv, mode: .combined)
+            let aes = try AES(key: sessionKey.bytes, blockMode: gcm, padding: .noPadding)
+            let sealed = try aes.encrypt(plain.bytes)
+            return EncryptedMessage(key: sessionKey, sealed: Data(sealed))
+        } catch {
+            throw XenError.encryptionError("")
+        }
+    }
+
+    /**
+     Decrypts data that has been encrypted following AES-GCM scheme.
+     - Parameter secret: Secret encoded in base64 format.
+     - Parameter sessionKey: sessionKey used to encrypt.
+     - Parameter iv: initilization vector or nonce in base64 format
+     - Throws: `XenError.decryptionError`
+                if there was any issue during decryption.
+     - Returns: The decrypted text.
+     */
+    public func decrypt(secret: String, sessionKey: Data, iv: String) throws -> Data {
+        do {
+            let secret = Data(base64Encoded: secret)!
+            let nonce = Data(base64Encoded: iv)!
+            let aesNonce = try! AES.GCM.Nonce(data: nonce)
+
+            let idxTag = secret.index(secret.endIndex, offsetBy: -16)
+            let tag = secret[idxTag...]
+
+            let idxCipher = secret.index(secret.startIndex, offsetBy: secret.count - 16)
+            let cipher = secret[..<idxCipher]
+
+            let sealed = try! AES.GCM.SealedBox(nonce: aesNonce, ciphertext: cipher, tag: tag)
+
+            if let decryptedData = try? AES.GCM.open(sealed, using: SymmetricKey(data: sessionKey)) {
+                return decryptedData
+            } else {
+                throw XenError.decryptionError("")
+            }
+        } catch {
+            throw XenError.decryptionError("")
+        }
+    }
+
+    private static func getKeyFromKeychain(tag: String) -> SecKey? {
+        var keyRef: AnyObject?
+        let attributes: [String: Any] = [
+            String(kSecAttrKeyType): kSecAttrKeyTypeRSA,
+            String(kSecClass): kSecClassKey,
+            String(kSecAttrApplicationTag): tag,
+            String(kSecReturnRef): true
+        ]
+        let status = SecItemCopyMatching(attributes as CFDictionary, &keyRef)
+        if status != 0 {
+            return nil
+        }
+        return keyRef as! SecKey
+    }
+
+    private static func getKeyFromKeychainAsData(tag: String) -> Data? {
+        var keyRef: AnyObject?
+        let attributes: [String: Any] = [
+            String(kSecAttrKeyType): kSecAttrKeyTypeRSA,
+            String(kSecClass): kSecClassKey,
+            String(kSecAttrApplicationTag): tag,
+            String(kSecReturnRef): true
+        ]
+        let status = SecItemCopyMatching(attributes as CFDictionary, &keyRef)
+        if status != 0 {
+            return nil
+        }
+        return keyRef as? Data
+    }
+
+    private static func updateKeychain(tag: String, key: Data) -> Bool {
+        let attributes: [String: Any] = [
+            String(kSecAttrKeyType): kSecAttrKeyTypeRSA,
+            String(kSecClass): kSecClassKey,
+            String(kSecAttrApplicationTag): tag
+        ]
+        return SecItemUpdate(attributes as CFDictionary, [String(kSecValueData): key] as CFDictionary) == errSecSuccess
+    }
+
+    private static func addToKeychain(tag: String, key: Data) -> SecKey? {
+        let attributes: [String: Any] = [
+            String(kSecAttrKeyType): kSecAttrKeyTypeRSA,
+            String(kSecClass): kSecClassKey,
+            String(kSecAttrApplicationTag): tag,
+            String(kSecValueData): key,
+            String(kSecReturnPersistentRef): true
+        ]
+        var keyRef: AnyObject?
+        let status = SecItemAdd(attributes as CFDictionary, &keyRef)
+        if status != 0 {
+            return nil
+        }
+        return keyRef as! SecKey
+    }
+
+    private static func createKeyFromData(key: Data) -> SecKey? {
+        let attributes: [String: Any] = [
+            String(kSecAttrKeyType): kSecAttrKeyTypeRSA,
+            String(kSecAttrKeyClass): kSecAttrKeyClassPublic,
+            String(kSecAttrKeySizeInBits): key.count * 8
+        ]
+        let key = SecKeyCreateWithData(key as CFData, attributes as CFDictionary, nil)
+        return key
+    }
+}
+
+private extension SecKey {
+    enum KeyType {
+        case rsa
+        var secAttrKeyTypeValue: CFString {
+            switch self {
+            case .rsa:
+                return kSecAttrKeyTypeRSA
+            }
+        }
+    }
+
+    func encrypt(algorithm: SecKeyAlgorithm, plaintext: Data) throws -> Data {
+        var error: Unmanaged<CFError>?
+        let ciphertextO = SecKeyCreateEncryptedData(self, algorithm,
+                                                    plaintext as CFData, &error)
+        if let error = error?.takeRetainedValue() { throw error }
+        guard let ciphertext = ciphertextO else { throw XenError.encryptRSAError("") }
+        return ciphertext as Data
+    }
+}

@@ -3,27 +3,39 @@
 # Xenissuing 
 
 This SDK comprises of the following modules :
-- XenCrypt: this module handles encryption between XenIssuing and your iOS application.
+- SecureSession: this module handles encryption between XenIssuing and your iOS application.
 ## Requirements
 
-To be able to use XenIssuing, you will need to use a private key provided by Xendit.
+To be able to use XenIssuing, you will need to use the public key provided by Xendit.
 
 ## Usage
 
 
-### Xencrypt
+### SecureSession
 
-XenCrypt is a module to help you set up encryption between XenIssuing and your application.
+SecureSession is a module to help you set up encryption between XenIssuing and your application.
 
 It includes several methods:
-- `generateSessionId` will encrypt a session key randomly generated used for symmetric encryption with Xenissuing.
+- `generateSessionId` will encrypt a session key randomly generated used for asymmetric encryption with Xenissuing.
 - `encrypt` would be used when setting sensitive data.
 - `decrypt` would be used whenever receiving sensitive data from Xenissuing.
+
+
+### Session ID
+
+```swift
+let xen = try! Xenissuing(xenditPublicKeyData: Data(base64Encoded: "BASE64_PUBLIC_KEY")!)
+let sessionKey = try! xen.generateRandom()
+let sessionId = try! xen.generateSessionId(sessionKey: sessionKey)
+let sealed = sessionId.sealed // Data
+```
+
+### Encryption
 
 ```swift
 import Xenissuing
 
-let xen = Xenissuing(xenditKey: "test".data(using: .utf8)!)
+let xen = try! Xenissuing(xenditPublicKeyData: Data(base64Encoded: "BASE64_PUBLIC_KEY")!)
 let nonce = try! xen.generateRandom()
 let privateKey = try! xen.generateRandom()
 let encrypted = try! xen.encrypt(plain: "hTlNMg4CJZVdTIfXBehfxcU0XQ==".data(using: .utf8)!, iv: nonce, sessionKey: privateKey)
