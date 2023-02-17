@@ -4,21 +4,8 @@ import CryptoSwift
 import Foundation
 import Security
 
-/// https://stackoverflow.com/a/57912525
-@available(macOS 10.15, *)
-extension SymmetricKey {
-    // MARK: - Instance Methods
-
-    /// Serializes a `SymmetricKey` to a Base64-encoded `String`.
-    func serialize() -> Data {
-        return withUnsafeBytes { body in
-            Data(body)
-        }
-    }
-}
-
 protocol Crypto {
-    func generateRandom() throws -> Data
+    func generateRandom(size: Int) throws -> Data
     func generateSessionId(sessionKey: Data) throws -> EncryptedMessage
     func encrypt(plain: Data, iv: Data, sessionKey: Data) throws -> EncryptedMessage
     func decrypt(secret: String, sessionKey: Data, iv: String) throws -> Data
@@ -85,14 +72,18 @@ public class SecureSession: Crypto {
     }
 
     /**
-     Generates a random 24 bytes keys.
+     Generates a random 32 bytes keys.
       - Throws: `XenError.generateRandomKeyError`
                 if  there was any issue when trying to generate the symmetric key.
       - Returns: the random session key.
       */
-    public func generateRandom() throws -> Data {
-        let key = SymmetricKey(size: .bits192)
-        return key.serialize()
+    public func generateRandom(size: Int = 32) throws -> Data {
+        var randomBytes = [UInt8](repeating: 0, count: 32)
+        let result = SecRandomCopyBytes(kSecRandomDefault, randomBytes.count, &randomBytes)
+        guard result == errSecSuccess else {
+            throw XenError.generateRandomKeyError("")
+        }
+        return Data(randomBytes)
     }
 
     /**
