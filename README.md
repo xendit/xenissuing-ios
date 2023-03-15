@@ -24,9 +24,9 @@ It includes several methods:
 ### Session ID
 
 ```swift
-let xen = try! Xenissuing(xenditPublicKeyData: Data(base64Encoded: "BASE64_PUBLIC_KEY")!)
+let xen = try! Xenissuing(xenditPublicKeyData: Data(base64Encoded: "BASE64_PUBLIC_KEY", options: .ignoreUnknownCharacters)!)
 let sessionKey = try! xen.generateRandom()
-let sessionId = try! xen.generateSessionId(sessionKey: sessionKey)
+let sessionId = try! xen.generateSessionId(sessionKey: sessionKey.base64EncodedString().data(using: .utf8)!)
 let sealed = sessionId.sealed // Data
 ```
 
@@ -35,7 +35,7 @@ let sealed = sessionId.sealed // Data
 ```swift
 import Xenissuing
 
-let xen = try! Xenissuing(xenditPublicKeyData: Data(base64Encoded: "BASE64_PUBLIC_KEY")!)
+let xen = try! Xenissuing(xenditPublicKeyData: Data(base64Encoded: "BASE64_PUBLIC_KEY", options: .ignoreUnknownCharacters)!)
 let nonce = try! xen.generateRandom()
 let privateKey = try! xen.generateRandom()
 let encrypted = try! xen.encrypt(plain: "hTlNMg4CJZVdTIfXBehfxcU0XQ==".data(using: .utf8)!, iv: nonce, sessionKey: privateKey)
