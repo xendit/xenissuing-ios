@@ -29,22 +29,22 @@ public class SecureSession: Crypto {
     let xenditPublicKey: SecKey
 
     /**
-    Initializes an object with the provided public key data and tag.
-    
-    - Parameters:
-    - xenditPublicKeyData: The public key data.
-    - xenditPublicKeyTag: The keychain tag for the public key. Defaults to nil.
-    
-    - Throws:
-    - XenError.convertKeyDataError: If the public key data cannot be converted to a key.
-    - XenError.updateKeychainError: If the keychain cannot be updated with the new key data.
-    
-    - Note:
-    - The error message passed is optional, if no message is passed the default message from the XenError enumeration will be used
-    - SeeAlso:
-    - SecureSession: Class used to create and update the keychain
-    - XenError: Enumeration that defines the possible errors that can be thrown by the function
-    */
+     Initializes an object with the provided public key data and tag.
+
+     - Parameters:
+     - xenditPublicKeyData: The public key data.
+     - xenditPublicKeyTag: The keychain tag for the public key. Defaults to nil.
+
+     - Throws:
+     - XenError.convertKeyDataError: If the public key data cannot be converted to a key.
+     - XenError.updateKeychainError: If the keychain cannot be updated with the new key data.
+
+     - Note:
+     - The error message passed is optional, if no message is passed the default message from the XenError enumeration will be used
+     - SeeAlso:
+     - SecureSession: Class used to create and update the keychain
+     - XenError: Enumeration that defines the possible errors that can be thrown by the function
+     */
     init(xenditPublicKeyData: Data, xenditPublicKeyTag: String? = nil) throws {
         if let publicTag = xenditPublicKeyTag {
             if let keyFromKeychain = SecureSession.getKeyFromKeychainAsData(tag: publicTag) {
@@ -55,7 +55,7 @@ public class SecureSession: Crypto {
                 }
                 self.xenditPublicKey = SecureSession.getKeyFromKeychain(tag: publicTag)!
             } else if let key = SecureSession.createKeyFromData(key: xenditPublicKeyData) {
-                if !SecureSession.updateKeychain(tag: publicTag, key: xenditPublicKeyData) {
+                if SecureSession.addToKeychain(tag: publicTag, key: xenditPublicKeyData) {
                     throw XenError.updateKeychainError("")
                 }
                 self.xenditPublicKey = key
@@ -77,7 +77,7 @@ public class SecureSession: Crypto {
                 if  there was any issue when trying to generate the symmetric key.
       - Returns: the random session key.
       */
-    public func generateRandom(size: Int = 32) throws -> Data {
+    public func generateRandom(size _: Int = 32) throws -> Data {
         var randomBytes = [UInt8](repeating: 0, count: 32)
         let result = SecRandomCopyBytes(kSecRandomDefault, randomBytes.count, &randomBytes)
         guard result == errSecSuccess else {
@@ -199,7 +199,7 @@ public class SecureSession: Crypto {
         return SecItemUpdate(attributes as CFDictionary, [String(kSecValueData): key] as CFDictionary) == errSecSuccess
     }
 
-    private static func addToKeychain(tag: String, key: Data) -> SecKey? {
+    private static func addToKeychain(tag: String, key: Data) -> Bool {
         let attributes: [String: Any] = [
             String(kSecAttrKeyType): kSecAttrKeyTypeRSA,
             String(kSecClass): kSecClassKey,
@@ -207,12 +207,8 @@ public class SecureSession: Crypto {
             String(kSecValueData): key,
             String(kSecReturnPersistentRef): true
         ]
-        var keyRef: AnyObject?
-        let status = SecItemAdd(attributes as CFDictionary, &keyRef)
-        if status != 0 {
-            return nil
-        }
-        return keyRef as! SecKey
+        let status = SecItemAdd(attributes as CFDictionary, nil)
+        return status == 0
     }
 
     private static func createKeyFromData(key: Data) -> SecKey? {
