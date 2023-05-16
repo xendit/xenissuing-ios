@@ -38,6 +38,7 @@ public class SecureSession: Crypto {
      - Throws:
      - XenError.convertKeyDataError: If the public key data cannot be converted to a key.
      - XenError.updateKeychainError: If the keychain cannot be updated with the new key data.
+     - XenError.addKeychainError: If the the new key cannot be added to the keychain.
 
      - Note:
      - The error message passed is optional, if no message is passed the default message from the XenError enumeration will be used
