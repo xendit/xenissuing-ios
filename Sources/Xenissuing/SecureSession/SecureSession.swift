@@ -55,8 +55,8 @@ public class SecureSession: Crypto {
                 }
                 self.xenditPublicKey = SecureSession.getKeyFromKeychain(tag: publicTag)!
             } else if let key = SecureSession.createKeyFromData(key: xenditPublicKeyData) {
-                if SecureSession.addToKeychain(tag: publicTag, key: xenditPublicKeyData) {
-                    throw XenError.updateKeychainError("")
+                if !SecureSession.addToKeychain(tag: publicTag, key: xenditPublicKeyData) {
+                    throw XenError.addKeychainError("")
                 }
                 self.xenditPublicKey = key
             } else {
