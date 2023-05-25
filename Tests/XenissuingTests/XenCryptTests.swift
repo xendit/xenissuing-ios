@@ -27,7 +27,6 @@ final class SecureSessionTests: XCTestCase {
     }
 
     override func tearDown() {
-        SecKey.deleteKey(tag: privateKeyTag)
         SecKey.deleteKey(tag: publicKeyTag)
     }
 
@@ -120,6 +119,18 @@ extension SecKey {
         if let error = error?.takeRetainedValue() { throw error }
         guard let plaintext = plaintextO else { throw TestsErrors.nilPlaintext }
         return plaintext as Data
+    }
+
+    static func addToKeychain(tag: String, key: Data) -> Bool {
+        let attributes: [String: Any] = [
+            String(kSecAttrKeyType): kSecAttrKeyTypeRSA,
+            String(kSecClass): kSecClassKey,
+            String(kSecAttrApplicationTag): tag,
+            String(kSecValueData): key,
+            String(kSecReturnPersistentRef): true,
+        ]
+        let status = SecItemAdd(attributes as CFDictionary, nil)
+        return status == 0
     }
 
     static func deleteKey(tag: String) {

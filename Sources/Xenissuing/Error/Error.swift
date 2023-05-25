@@ -7,6 +7,7 @@ public enum XenError: Error {
     case generateRandomKeyError(String)
     case generateSessionIdError(String)
     case updateKeychainError(String)
+    case addKeychainError(String)
     case convertKeyDataError(String)
     case encryptRSAError(String)
     static let encryptionErrorDefaultMessage: String = "There was an error while trying to encrypt using XenIssuing library."
@@ -16,6 +17,7 @@ public enum XenError: Error {
     static let generateSessionIdErrorDefaultMessage: String = "There was an error while generating a session id."
     static let convertKeyDataErrorDefaultMessage: String = "There was an error while trying to read the public key data."
     static let updateKeychainErrorDefaultMessage: String = "There was an error while trying to update the keychain."
+    static let addToKeychainErrorDefaultMessage: String = "There was an error while trying to add to the keychain."
     static let encryptRSAErrorDefaultMessage: String = "There was an error while trying to encrypt with RSA."
 
     var localizedDescription: String {
@@ -31,9 +33,11 @@ public enum XenError: Error {
             case .generateSessionIdError(let message):
                 return message.isEmpty ? XenError.generateSessionIdErrorDefaultMessage : message
             case .updateKeychainError(let message):
-                return message.isEmpty ? XenError.convertKeyDataErrorDefaultMessage : message
-            case .convertKeyDataError(let message):
                 return message.isEmpty ? XenError.updateKeychainErrorDefaultMessage : message
+            case .addKeychainError(let message):
+                return message.isEmpty ? XenError.addToKeychainErrorDefaultMessage : message
+            case .convertKeyDataError(let message):
+                return message.isEmpty ? XenError.convertKeyDataErrorDefaultMessage : message
             case .encryptRSAError(let message):
                 return message.isEmpty ? XenError.encryptRSAErrorDefaultMessage : message
         }
