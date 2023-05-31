@@ -7,7 +7,7 @@ import Foundation
 // MARK: - Xenissuing
 
 @available(macOS 10.15, *)
-public final class Xenissuing: SecureSession {
+public enum Xenissuing {
     /**
      Initializes XenIssuing module.
 
@@ -17,11 +17,16 @@ public final class Xenissuing: SecureSession {
 
      - Returns: Main module.
      */
-    override public init(xenditPublicKeyData: Data, xenditPublicKeyTag: String? = nil) throws {
-        do {
-            try super.init(xenditPublicKeyData: xenditPublicKeyData, xenditPublicKeyTag: xenditPublicKeyTag)
-        } catch {
-            throw error
-        }
+    // override public init(xenditPublicKeyData: Data, xenditPublicKeyTag: String? = nil) throws {
+    //     do {
+    //         try super.init(xenditPublicKeyData: xenditPublicKeyData, xenditPublicKeyTag: xenditPublicKeyTag)
+    //     } catch {
+    //         throw error
+    //     }
+    // }
+
+    public static func createSecureSession(xenditPublicKeyData: Data, xenditPublicKeyTag: String? = nil) throws -> SecureSession {
+        let secSession: SecureSession = try SecureSession(xenditPublicKeyData: xenditPublicKeyData, xenditPublicKeyTag: xenditPublicKeyTag)
+        return secSession
     }
 }
