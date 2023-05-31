@@ -27,7 +27,7 @@ public struct EncryptedMessage {
 public class SecureSession: Crypto {
     /// The key provided by Xendit.
     let xenditPublicKey: SecKey
-    var sSession: EncryptedMessage?
+    var secureSession: EncryptedMessage?
 
     /**
      Initializes an object with the provided public key data and tag.
@@ -72,11 +72,11 @@ public class SecureSession: Crypto {
             }
         }
         let sKey = try self.generateRandom()
-        self.sSession = try self.generateSessionId(sessionKey: sKey)
+        self.secureSession = try self.generateSessionId(sessionKey: sKey)
     }
 
     public func getKey() -> Data {
-        return self.sSession!.key
+        return self.secureSession!.key
     }
 
     public func decryptCardData(secret: String, iv: String) throws -> Data {
