@@ -1,3 +1,8 @@
+import Crypto
+import CryptoKit
+import CryptoSwift
+import Foundation
+import Security
 import XCTest
 @testable import Xenissuing
 
@@ -14,5 +19,10 @@ final class XenissuingTests: XCTestCase {
     func testCreateSecureSession() throws {
         let secureSession = try Xenissuing.createSecureSession(xenditPublicKeyData: Data(base64Encoded: validPublicKey)!)
         XCTAssertNotNil(secureSession.secureSession)
+    }
+
+    func testSecureSessionGetKey() throws {
+        let secureSession = try Xenissuing.createSecureSession(xenditPublicKeyData: Data(base64Encoded: validPublicKey)!)
+        XCTAssertNotNil(secureSession.getKey())
     }
 }

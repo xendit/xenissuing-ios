@@ -6,13 +6,13 @@ import Security
 
 protocol Crypto {
     func generateRandom(size: Int) throws -> Data
-    func generateSessionId(sessionKey: Data) throws -> EncryptedMessage
-    func encrypt(plain: Data, iv: Data, sessionKey: Data) throws -> EncryptedMessage
+    func generateSessionId(sessionKey: Data) throws -> SecuredSession
+    func encrypt(plain: Data, iv: Data, sessionKey: Data) throws -> SecuredSession
     func decrypt(secret: String, sessionKey: Data, iv: String) throws -> Data
 }
 
 /// Encapsulates encrypted message and key used as encryption key.
-public struct EncryptedMessage {
+public struct SecuredSession {
     internal let key: Data
     public let sealed: Data
     public init(key: Data, sealed: Data) {
@@ -27,7 +27,7 @@ public struct EncryptedMessage {
 public class SecureSession: Crypto {
     /// The key provided by Xendit.
     let xenditPublicKey: SecKey
-    var secureSession: EncryptedMessage?
+    var secureSession: SecuredSession?
 
     /**
      Initializes an object with the provided public key data and tag.
@@ -74,9 +74,12 @@ public class SecureSession: Crypto {
         let sKey = try self.generateRandom()
         self.secureSession = try self.generateSessionId(sessionKey: sKey)
     }
-
+    
+    /**
+     Returns the encrypted session key.
+     */
     public func getKey() -> Data {
-        return self.secureSession!.key
+        return self.secureSession!.sealed
     }
 
     public func decryptCardData(secret: String, iv: String) throws -> Data {
@@ -106,12 +109,12 @@ public class SecureSession: Crypto {
                 if  there was any issue during encryption.
       - Returns: The encrypted text
       */
-    internal func generateSessionId(sessionKey: Data) throws -> EncryptedMessage {
+    internal func generateSessionId(sessionKey: Data) throws -> SecuredSession {
         do {
             let sealed = try self.xenditPublicKey.encrypt(
                 algorithm: .rsaEncryptionOAEPSHA256,
                 plaintext: sessionKey)
-            return EncryptedMessage(key: sessionKey, sealed: sealed)
+            return SecuredSession(key: sessionKey, sealed: sealed)
         } catch {
             throw XenError.generateSessionIdError("")
         }
@@ -126,13 +129,13 @@ public class SecureSession: Crypto {
                if  there was any issue during encryption.
      - Returns: The encrypted text
      */
-    public func encrypt(plain: Data, iv _: Data, sessionKey: Data) throws -> EncryptedMessage {
+    public func encrypt(plain: Data, iv _: Data, sessionKey: Data) throws -> SecuredSession {
         do {
             let iv = AES.randomIV(32)
             let gcm = GCM(iv: iv, mode: .combined)
             let aes = try AES(key: sessionKey.bytes, blockMode: gcm, padding: .noPadding)
             let sealed = try aes.encrypt(plain.bytes)
-            return EncryptedMessage(key: sessionKey, sealed: Data(sealed))
+            return SecuredSession(key: sessionKey, sealed: Data(sealed))
         } catch {
             throw XenError.encryptionError("")
         }
