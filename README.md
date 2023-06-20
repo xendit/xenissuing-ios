@@ -2,42 +2,24 @@
 [![Swift Package Manager compatible](https://img.shields.io/badge/Swift_Package_Manager-compatible-brightgreen.svg?style=flat&colorA=28a745&&colorB=4E4E4E)](https://github.com/apple/swift-package-manager)
 # Xenissuing 
 
-This SDK comprises of the following modules :
-- SecureSession: this module handles encryption between XenIssuing and your iOS application.
-## Requirements
+The XenIssuing SDK includes a collection of modules designed to handle sensitive operations with ease and security in your iOS applications. Notably:
+- SecureSession: This module is responsible for ensuring encrypted communication between the XenIssuing SDK and your iOS application.
 
-To be able to use XenIssuing, you will need to use the public key provided by Xendit.
+## Prerequisites
+
+To utilize the XenIssuing SDK, a public key granted by Xendit is required. You can obtain this key by contacting Xendit directly.
 
 ## Usage
 
+### Establishing Secure Sessions
 
-### SecureSession
-
-SecureSession is a module to help you set up encryption between XenIssuing and your application.
-
-It includes several methods:
-- `generateSessionId` will encrypt a session key randomly generated used for asymmetric encryption with Xenissuing.
-- `encrypt` would be used when setting sensitive data.
-- `decrypt` would be used whenever receiving sensitive data from Xenissuing.
-
-
-### Session ID
-
-```swift
-let xen = try! Xenissuing(xenditPublicKeyData: Data(base64Encoded: "BASE64_PUBLIC_KEY", options: .ignoreUnknownCharacters)!)
-let sessionKey = try! xen.generateRandom()
-let sessionId = try! xen.generateSessionId(sessionKey: sessionKey.base64EncodedString().data(using: .utf8)!)
-let sealed = sessionId.sealed // Data
-```
-
-### Encryption
+The SecureSession module aids in establishing an encrypted communication link between the XenIssuing SDK and your application. Below is a Swift example demonstrating how to create a secure session and decrypt card data:
 
 ```swift
 import Xenissuing
 
-let xen = try! Xenissuing(xenditPublicKeyData: Data(base64Encoded: "BASE64_PUBLIC_KEY", options: .ignoreUnknownCharacters)!)
-let nonce = try! xen.generateRandom()
-let privateKey = try! xen.generateRandom()
-let encrypted = try! xen.encrypt(plain: "hTlNMg4CJZVdTIfXBehfxcU0XQ==".data(using: .utf8)!, iv: nonce, sessionKey: privateKey)
-let sealed = encrypted.sealed  // sealed message
+let secureSession = try Xenissuing.createSecureSession(xenditPublicKeyData: Data(base64Encoded: validPublicKey)!)
+let sessionId = secureSession.getKey().base64EncodedString()
+
+let decryptedData = secureSession.decryptCardData(secret: secret, iv: iv)
 ```
