@@ -6,13 +6,13 @@ import Security
 
 protocol Crypto {
     func generateRandom(size: Int) throws -> Data
-    func generateSessionId(sessionKey: Data) throws -> EncryptedMessage
-    func encrypt(plain: Data, iv: Data, sessionKey: Data) throws -> EncryptedMessage
+    func generateSessionId(sessionKey: Data) throws -> SecuredSession
+    func encrypt(plain: Data, iv: Data, sessionKey: Data) throws -> SecuredSession
     func decrypt(secret: String, sessionKey: Data, iv: String) throws -> Data
 }
 
 /// Encapsulates encrypted message and key used as encryption key.
-public struct EncryptedMessage {
+public struct SecuredSession {
     internal let key: Data
     public let sealed: Data
     public init(key: Data, sealed: Data) {
@@ -27,6 +27,7 @@ public struct EncryptedMessage {
 public class SecureSession: Crypto {
     /// The key provided by Xendit.
     let xenditPublicKey: SecKey
+    var secureSession: SecuredSession?
 
     /**
      Initializes an object with the provided public key data and tag.
@@ -70,6 +71,19 @@ public class SecureSession: Crypto {
                 throw XenError.convertKeyDataError("")
             }
         }
+        let sKey = try self.generateRandom()
+        self.secureSession = try self.generateSessionId(sessionKey: sKey)
+    }
+    
+    /**
+     Returns the encrypted session key.
+     */
+    public func getKey() -> Data {
+        return self.secureSession!.sealed
+    }
+
+    public func decryptCardData(secret: String, iv: String) throws -> Data {
+        return try self.decrypt(secret: secret, sessionKey: self.getKey(), iv: iv)
     }
 
     /**
@@ -78,7 +92,7 @@ public class SecureSession: Crypto {
                 if  there was any issue when trying to generate the symmetric key.
       - Returns: the random session key.
       */
-    public func generateRandom(size _: Int = 32) throws -> Data {
+    internal func generateRandom(size _: Int = 32) throws -> Data {
         var randomBytes = [UInt8](repeating: 0, count: 32)
         let result = SecRandomCopyBytes(kSecRandomDefault, randomBytes.count, &randomBytes)
         guard result == errSecSuccess else {
@@ -90,18 +104,17 @@ public class SecureSession: Crypto {
     /**
      Generates Session Id following AES-CBC  scheme using the key provided by Xendit.
      IV used is 16 bytes size.
-      - Parameter xenditKey: Secret key `Data` (provided by Xendit).
       - Parameter sessionKey: Random key `Data`.
       - Throws: `XenError.encryptionError`
                 if  there was any issue during encryption.
       - Returns: The encrypted text
       */
-    public func generateSessionId(sessionKey: Data) throws -> EncryptedMessage {
+    internal func generateSessionId(sessionKey: Data) throws -> SecuredSession {
         do {
             let sealed = try self.xenditPublicKey.encrypt(
                 algorithm: .rsaEncryptionOAEPSHA256,
                 plaintext: sessionKey)
-            return EncryptedMessage(key: sessionKey, sealed: sealed)
+            return SecuredSession(key: sessionKey, sealed: sealed)
         } catch {
             throw XenError.generateSessionIdError("")
         }
@@ -116,13 +129,13 @@ public class SecureSession: Crypto {
                if  there was any issue during encryption.
      - Returns: The encrypted text
      */
-    public func encrypt(plain: Data, iv _: Data, sessionKey: Data) throws -> EncryptedMessage {
+    public func encrypt(plain: Data, iv _: Data, sessionKey: Data) throws -> SecuredSession {
         do {
             let iv = AES.randomIV(32)
             let gcm = GCM(iv: iv, mode: .combined)
             let aes = try AES(key: sessionKey.bytes, blockMode: gcm, padding: .noPadding)
             let sealed = try aes.encrypt(plain.bytes)
-            return EncryptedMessage(key: sessionKey, sealed: Data(sealed))
+            return SecuredSession(key: sessionKey, sealed: Data(sealed))
         } catch {
             throw XenError.encryptionError("")
         }
@@ -137,7 +150,7 @@ public class SecureSession: Crypto {
                 if there was any issue during decryption.
      - Returns: The decrypted text.
      */
-    public func decrypt(secret: String, sessionKey: Data, iv: String) throws -> Data {
+    internal func decrypt(secret: String, sessionKey: Data, iv: String) throws -> Data {
         do {
             let secret = Data(base64Encoded: secret)!
             let nonce = Data(base64Encoded: iv)!
