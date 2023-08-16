@@ -76,10 +76,10 @@ public class SecureSession: Crypto {
     }
     
     /**
-     Returns the encrypted session key.
+     Returns the session key.
      */
     public func getKey() -> Data {
-        return self.secureSession!.sealed
+        return self.secureSession!.key
     }
 
     public func decryptCardData(secret: String, iv: String) throws -> Data {
