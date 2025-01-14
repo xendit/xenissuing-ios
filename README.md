@@ -15,8 +15,6 @@ The XenIssuing SDK provides a secure way to handle sensitive operations in your 
 
 ### Creating a Secure Session
 
-1. First, initialize a secure session with your Xendit public key:
-
 ```swift
 import Xenissuing
 
@@ -30,20 +28,17 @@ do {
         xenditPublicKeyData: Data(base64Encoded: publicKey)!
     )
     
-    // Get session key (for validation)
-    let sessionKey = secureSession.getKey().base64EncodedString()
-    
-    // Get encrypted session ID and URL encode it for API requests
-    let sessionId = secureSession.getEncryptedKey().base64EncodedString()
+    // Get session ID for API authentication
+    let sessionId = secureSession.getSessionId().base64EncodedString()
     
     // Important: URL encode the session ID as it will be used as a URL parameter
     let allowedCharacters = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
     let encodedSessionId = sessionId.addingPercentEncoding(withAllowedCharacters: allowedCharacters) ?? ""
     
-    // Use encodedSessionId when making API requests, for example:
-    // https://api.xendit.co/your/endpoint?session_id={encodedSessionId}
+    // Use encodedSessionId in API requests
+    let apiUrl = "https://api.xendit.co/card_issuing/cards/{cardId}/pan?session_id=\(encodedSessionId)"
 } catch {
-    print("Error creating secure session:", error)
+    print("Error:", error)
 }
 ```
 
