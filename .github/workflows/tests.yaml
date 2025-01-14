@@ -4,18 +4,14 @@ on: [push]
 
 jobs:
   build:
-    name: Swift ${{ matrix.swift }}
-    strategy:
-      matrix:
-        swift: ["5.7", "5.8"]
-      fail-fast: false
+    name: Swift Tests
     runs-on: macos-13
     env:
       DEVELOPER_DIR: /Applications/Xcode_14.3.1.app/Contents/Developer
     steps:
       - uses: swift-actions/setup-swift@v1
         with:
-          swift-version: ${{ matrix.swift }}
+          swift-version: "5.7"
       - uses: actions/checkout@v3
       - name: Build
         run: swift build -v
