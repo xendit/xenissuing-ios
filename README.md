@@ -65,7 +65,7 @@ The session ID must be URL encoded because:
 
 Example API usage:
 ```swift
-let apiUrl = "https://api.xendit.co/card_issuing//cards/\(cardId)/pan?session_id=\(encodedSessionId)"
+let apiUrl = "https://api.xendit.co/card_issuing/cards/\(cardId)/pan?session_id=\(encodedSessionId)"
 ```
 
 ### Decrypting Card Data
