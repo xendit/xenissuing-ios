@@ -40,9 +40,14 @@ final class SecureSessionTests: XCTestCase {
         let xcrypt = try! SecureSession(xenditPublicKeyData: publicKeyData)
         let sessionKey = try! xcrypt.generateRandom()
         let sessionId = try! xcrypt.generateSessionId(sessionKey: sessionKey)
+        
+        // Decrypt the sealed data
         let decryptedBytes = try! privateKey.decrypt(algorithm: .rsaEncryptionOAEPSHA256, ciphertext: sessionId.sealed)
         let decryptedData = Data(decryptedBytes)
-        XCTAssertEqual(sessionKey.base64EncodedString(), decryptedData.base64EncodedString())
+        
+        // Convert decrypted bytes back to string and compare with original base64 encoded session key
+        let decryptedString = String(data: decryptedData, encoding: .utf8)!
+        XCTAssertEqual(sessionKey.base64EncodedString(), decryptedString)
     }
 
     func testDecrypt() {
