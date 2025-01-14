@@ -78,12 +78,30 @@ public class SecureSession: Crypto {
     /**
      Returns the encrypted session key.
      */
-    public func getKey() -> Data {
+    public func getSessionId() -> Data {
+        // This should be used for API authentication
         return self.secureSession!.sealed
     }
 
+    public func getSessionKey() -> Data {
+        // This should be used for validation
+        return self.secureSession!.key
+    }
+
+    // deprecate ambiguous method
+    @available(*, deprecated, message: "Use getSessionId() instead")
+    public func getEncryptedKey() -> Data {
+        return getSessionId()
+    }
+
+    // deprecate ambiguous method
+    @available(*, deprecated, message: "Use getSessionKey() instead")
+    public func getKey() -> Data {
+        return getSessionKey()
+    }
+
     public func decryptCardData(secret: String, iv: String) throws -> Data {
-        return try self.decrypt(secret: secret, sessionKey: self.getKey(), iv: iv)
+        return try self.decrypt(secret: secret, sessionKey: self.getSessionKey(), iv: iv)
     }
 
     /**
@@ -111,9 +129,17 @@ public class SecureSession: Crypto {
       */
     internal func generateSessionId(sessionKey: Data) throws -> SecuredSession {
         do {
+            // 1. Base64 encode the session key
+            let base64Key = sessionKey.base64EncodedString()
+            
+            // 2. Convert to raw bytes
+            let keyBytes = Data(base64Key.utf8)
+            
+            // 3. Encrypt using RSA-OAEP-SHA256
             let sealed = try self.xenditPublicKey.encrypt(
                 algorithm: .rsaEncryptionOAEPSHA256,
-                plaintext: sessionKey)
+                plaintext: keyBytes)
+            
             return SecuredSession(key: sessionKey, sealed: sealed)
         } catch {
             throw XenError.generateSessionIdError("")
@@ -122,8 +148,8 @@ public class SecureSession: Crypto {
 
     /**
      Encrypts data following AES-GCM scheme.
-     - Parameter plain: the data to encrupt.
-     - Parameter iv: initilization vector randomly generated
+     - Parameter plain: the data to encrypt.
+     - Parameter iv: initialization vector randomly generated
      - Parameter sessionKey: sessionKey used to encrypt
      - Throws: `XenError.encryptionError`
                if  there was any issue during encryption.
@@ -145,7 +171,7 @@ public class SecureSession: Crypto {
      Decrypts data that has been encrypted following AES-GCM scheme.
      - Parameter secret: Secret encoded in base64 format.
      - Parameter sessionKey: sessionKey used to encrypt.
-     - Parameter iv: initilization vector or nonce in base64 format
+     - Parameter iv: initialization vector or nonce in base64 format
      - Throws: `XenError.decryptionError`
                 if there was any issue during decryption.
      - Returns: The decrypted text.
@@ -186,7 +212,8 @@ public class SecureSession: Crypto {
         if status != 0 {
             return nil
         }
-        return keyRef as! SecKey
+        return (keyRef as! SecKey)
+
     }
 
     private static func getKeyFromKeychainAsData(tag: String) -> Data? {
@@ -249,10 +276,25 @@ private extension SecKey {
 
     func encrypt(algorithm: SecKeyAlgorithm, plaintext: Data) throws -> Data {
         var error: Unmanaged<CFError>?
-        let ciphertextO = SecKeyCreateEncryptedData(self, algorithm,
-                                                    plaintext as CFData, &error)
-        if let error = error?.takeRetainedValue() { throw error }
-        guard let ciphertext = ciphertextO else { throw XenError.encryptRSAError("") }
-        return ciphertext as Data
+        
+        // 1. Verify algorithm support
+        guard SecKeyIsAlgorithmSupported(self, .encrypt, .rsaEncryptionOAEPSHA256) else {
+            throw XenError.encryptRSAError("RSA-OAEP-SHA256 not supported")
+        }
+        
+        // 2. Perform encryption with OAEP padding
+        guard let ciphertext = SecKeyCreateEncryptedData(
+            self,
+            .rsaEncryptionOAEPSHA256,
+            plaintext as CFData,
+            &error
+        ) as Data? else {
+            if let error = error?.takeRetainedValue() {
+                throw error
+            }
+            throw XenError.encryptRSAError("Encryption failed")
+        }
+        
+        return ciphertext
     }
 }
