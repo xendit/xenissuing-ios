@@ -9,7 +9,9 @@ jobs:
       matrix:
         swift: ["5.7", "5.8"]
       fail-fast: false
-    runs-on: macos-latest
+    runs-on: macos-13
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_14.3.1.app/Contents/Developer
     steps:
       - uses: swift-actions/setup-swift@v1
         with:
